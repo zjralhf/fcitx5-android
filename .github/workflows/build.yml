@@ -3,7 +3,8 @@ name: Build
 on:
   pull_request:
   push:
-    branches: [46key-layout]
+#    branches: [46key-layout]
+    branches: [nix]
 
 jobs:
   develop:
@@ -37,7 +38,7 @@ jobs:
       - name: Apply patch
         if: ${{ matrix.patch != '46key' }}
         run: |
-          nix develop .#noAS --command git apply patches/${{ matrix.patch }}.patch
+          git apply patches/${{ matrix.patch }}.patch
       - name: Build Release APK
         env:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
@@ -45,7 +46,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           STORE_FILE: ${{ github.workspace }}/release-key.jks
         run: |
-          nix develop .#noAS --command ./gradlew :app:assembleRelease
+          git tag -d 26key 35key 45key 45key-numbers 46key
+          nix develop .#noAS --command ./gradlew app:assembleRelease
       - name: Create release
         uses: marvinpinto/action-automatic-releases@latest
         with:

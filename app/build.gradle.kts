@@ -15,6 +15,7 @@ android {
     defaultConfig {
         applicationId = "org.fcitx.fcitx5.android"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionName = runCmd("git describe --tags --long --always")
 
         @Suppress("UnstableApiUsage")
         externalNativeBuild {
