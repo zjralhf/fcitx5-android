@@ -62,12 +62,13 @@ abstract class BaseKeyboard(
     private val popupOnKeyPress by prefs.keyboard.popupOnKeyPress
     private val expandKeypressArea by prefs.keyboard.expandKeypressArea
     private val swipeSymbolDirection by prefs.keyboard.swipeSymbolDirection
+    private val longPressDelay by prefs.keyboard.longPressDelay
 
     private val spaceSwipeMoveCursor = prefs.keyboard.spaceSwipeMoveCursor
     private val spaceKeys = mutableListOf<KeyView>()
     private val spaceSwipeChangeListener = ManagedPreference.OnChangeListener<Boolean> { _, v ->
         spaceKeys.forEach {
-            it.swipeEnabled = v
+            it.swipeThresholdX = if (v) selectionSwipeThreshold else disabledSwipeThreshold
         }
     }
 
@@ -90,6 +91,7 @@ abstract class BaseKeyboard(
      * HashMap of [PointerId (Int)][MotionEvent.getPointerId] to [KeyView]
      */
     private val touchTarget = hashMapOf<Int, View>()
+    val symbolDisplay = if (themePrefs.symbolDisplay.getValue()) ::AltTextKeyView else ::TextKeyView
 
     init {
         isMotionEventSplittingEnabled = true
@@ -166,23 +168,26 @@ abstract class BaseKeyboard(
             }
             if (def is SpaceKey) {
                 spaceKeys.add(this)
-                swipeEnabled = spaceSwipeMoveCursor.getValue()
+                swipeEnabled = true
                 swipeRepeatEnabled = true
-                swipeThresholdX = selectionSwipeThreshold
-                swipeThresholdY = disabledSwipeThreshold
+                swipeThresholdX =
+                    if (spaceSwipeMoveCursor.getValue()) selectionSwipeThreshold else disabledSwipeThreshold
+                swipeThresholdY = inputSwipeThreshold
                 onGestureListener = OnGestureListener { view, event ->
                     when (event.type) {
                         GestureType.Move -> when (val count = event.countX) {
                             0 -> false
                             else -> {
-                                val sym =
-                                    if (count > 0) FcitxKeyMapping.FcitxKey_Right else FcitxKeyMapping.FcitxKey_Left
-                                val action = KeyAction.SymAction(KeySym(sym), KeyStates.Empty)
-                                repeat(count.absoluteValue) {
-                                    onAction(action)
-                                    if (hapticOnRepeat) InputFeedbacks.hapticFeedback(view)
-                                }
-                                true
+                                if (event.pressTime > longPressDelay / 2 && event.x.absoluteValue > event.y.absoluteValue) {
+                                    val sym =
+                                        if (count > 0) if (candidateStatus) FcitxKeyMapping.FcitxKey_Down else FcitxKeyMapping.FcitxKey_Right else if (candidateStatus) FcitxKeyMapping.FcitxKey_Up else FcitxKeyMapping.FcitxKey_Left
+                                    val action = KeyAction.SymAction(KeySym(sym), KeyStates.Empty)
+                                    repeat(count.absoluteValue) {
+                                        onAction(action)
+                                        if (hapticOnRepeat) InputFeedbacks.hapticFeedback(view)
+                                    }
+                                    true
+                                } else false
                             }
                         }
                         GestureType.Up -> {
