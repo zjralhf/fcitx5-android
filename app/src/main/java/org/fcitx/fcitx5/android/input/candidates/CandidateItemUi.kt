@@ -20,7 +20,7 @@ class CandidateItemUi(override val ctx: Context, theme: Theme) : Ui {
         scaleMode = AutoScaleTextView.Mode.None
         isSingleLine = true
         gravity = gravityCenter
-        setTextColor(theme.keyTextColor)
+        setTextColor(theme.candidateTextColor)
     }
 
     val comment = view(::AutoScaleTextView) {
